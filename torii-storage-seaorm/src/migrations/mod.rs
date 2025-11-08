@@ -11,6 +11,8 @@ use sea_orm_migration::{MigrationTrait, MigratorTrait};
 use crate::migrations::{
     m20250304_000004_create_passkeys_table::CreatePasskeys,
     m20250304_000006_create_secure_tokens::Migration as CreateSecureTokens,
+    m20251106_000001_pkce_verifiers_timestampz::PkceVerifiersTimestampZ,
+    m20251106_000002_oauth_accounts_timestampz::OauthAccountsTimestampZ,
 };
 
 mod m20250304_000001_create_user_table;
@@ -18,6 +20,8 @@ mod m20250304_000002_create_session_table;
 mod m20250304_000003_create_oauth_table;
 mod m20250304_000004_create_passkeys_table;
 mod m20250304_000006_create_secure_tokens;
+mod m20251106_000001_pkce_verifiers_timestampz;
+mod m20251106_000002_oauth_accounts_timestampz;
 
 #[allow(dead_code)]
 pub struct Migrator;
@@ -36,6 +40,8 @@ impl MigratorTrait for Migrator {
             Box::new(CreateOAuthAccounts),
             Box::new(CreatePasskeys),
             Box::new(CreateSecureTokens),
+            Box::new(PkceVerifiersTimestampZ),
+            Box::new(OauthAccountsTimestampZ),
         ]
     }
 }
