@@ -21,7 +21,7 @@ members = [
 
     # Level 5: Wrappers and helpers
     "torii-axum",
-
+    "torii-poem",
 
     # Examples (not published)
     "examples/todos",
