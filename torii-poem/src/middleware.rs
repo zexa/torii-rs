@@ -1,10 +1,8 @@
 use std::sync::Arc;
 
-use poem::{Endpoint, FromRequest, Middleware, Request, Result as PoemResult};
-use torii::Torii;
+use poem::{Endpoint, Middleware, Request, Result as PoemResult};
+use torii::{SessionToken, Torii};
 use torii_core::RepositoryProvider;
-
-use crate::extractor::SessionTokenFromRequest;
 
 /// Optional authentication middleware that loads user from session if present
 ///
@@ -55,31 +53,38 @@ pub struct AuthMiddlewareImpl<E, R: RepositoryProvider> {
 impl<E: Endpoint, R: RepositoryProvider + 'static> Endpoint for AuthMiddlewareImpl<E, R> {
     type Output = E::Output;
 
-    async fn call(&self, req: Request) -> PoemResult<Self::Output> {
-        // Use the extractor to get the session token
-        let (mut req, mut body) = req.split();
-        let SessionTokenFromRequest(session_token) =
-            SessionTokenFromRequest::from_request(&req, &mut body).await?;
+    async fn call(&self, mut req: Request) -> PoemResult<Self::Output> {
+        let session_token = {
+            if let Some(token) = req
+                .headers()
+                .get("authorization")
+                .and_then(|header| header.to_str().ok())
+                .and_then(|header| header.strip_prefix("Bearer "))
+            {
+                Some(SessionToken::new(token))
+            } else {
+                // Fall back to cookie
+                req.cookie()
+                    .get("session_id")
+                    .map(|cookie| SessionToken::new(cookie.value_str()))
+            }
+        };
 
         if let Some(session_token) = session_token {
             match self.torii.get_session(&session_token).await {
                 Ok(session) => match self.torii.get_user(&session.user_id).await {
                     Ok(Some(user)) => {
+                        // tracing::debug!(?user, "inserted user");
                         req.extensions_mut().insert(user);
                     }
-                    Ok(None) => {
-                        tracing::warn!("User not found for session: {:?}", session.user_id);
-                    }
-                    Err(e) => {
-                        tracing::error!("Error getting user: {:?}", e);
-                    }
+                    Ok(None) => tracing::warn!("User not found for session: {:?}", session.user_id),
+                    Err(e) => tracing::error!("Error getting user: {:?}", e),
                 },
-                Err(e) => {
-                    tracing::debug!("Invalid session: {:?}", e);
-                }
+                Err(e) => tracing::debug!("Invalid session: {:?}", e),
             }
         }
 
+        // Pass the complete request with body intact
         self.ep.call(req).await
     }
 }
@@ -136,10 +141,23 @@ impl<E: Endpoint, R: RepositoryProvider + 'static> Endpoint for RequireAuthMiddl
     async fn call(&self, req: Request) -> PoemResult<Self::Output> {
         use poem::{error::Error as PoemError, http::StatusCode};
 
-        // Use the extractor to get the session token
-        let (req, mut body) = req.split();
-        let SessionTokenFromRequest(session_token) =
-            SessionTokenFromRequest::from_request(&req, &mut body).await?;
+        // Extract session token without splitting the request
+        let session_token = {
+            // Try Bearer token first
+            if let Some(token) = req
+                .headers()
+                .get("authorization")
+                .and_then(|header| header.to_str().ok())
+                .and_then(|header| header.strip_prefix("Bearer "))
+            {
+                Some(SessionToken::new(token))
+            } else {
+                // Fall back to cookie
+                req.cookie()
+                    .get("session_id")
+                    .map(|cookie| SessionToken::new(cookie.value_str()))
+            }
+        };
 
         let session_token =
             session_token.ok_or_else(|| PoemError::from_status(StatusCode::UNAUTHORIZED))?;
@@ -150,6 +168,7 @@ impl<E: Endpoint, R: RepositoryProvider + 'static> Endpoint for RequireAuthMiddl
             .await
             .map_err(|_| PoemError::from_status(StatusCode::UNAUTHORIZED))?;
 
+        // Pass the complete request with body intact
         self.ep.call(req).await
     }
 }
