@@ -15,13 +15,13 @@ use crate::migrations::{
     m20251106_000002_oauth_accounts_timestampz::OauthAccountsTimestampZ,
 };
 
-mod m20250304_000001_create_user_table;
-mod m20250304_000002_create_session_table;
-mod m20250304_000003_create_oauth_table;
-mod m20250304_000004_create_passkeys_table;
-mod m20250304_000006_create_secure_tokens;
-mod m20251106_000001_pkce_verifiers_timestampz;
-mod m20251106_000002_oauth_accounts_timestampz;
+pub mod m20250304_000001_create_user_table;
+pub mod m20250304_000002_create_session_table;
+pub mod m20250304_000003_create_oauth_table;
+pub mod m20250304_000004_create_passkeys_table;
+pub mod m20250304_000006_create_secure_tokens;
+pub mod m20251106_000001_pkce_verifiers_timestampz;
+pub mod m20251106_000002_oauth_accounts_timestampz;
 
 #[allow(dead_code)]
 pub struct Migrator;
