@@ -72,7 +72,6 @@
 //! All entities include appropriate relationships and indexes for optimal performance.
 
 mod entities;
-mod migrations;
 mod oauth;
 mod passkey;
 mod password;
@@ -80,6 +79,7 @@ mod session;
 mod token;
 mod user;
 
+pub mod migrations;
 pub mod repositories;
 pub use repositories::SeaORMRepositoryProvider;
 
